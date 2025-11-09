@@ -1,2 +1,5 @@
 *.json
 jsonfmt
+test
+test.json
+test.cpp

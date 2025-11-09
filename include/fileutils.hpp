@@ -31,8 +31,7 @@ namespace fileutils{
             void pushChar(char nextChar){
                 outPutBuffer[bytesPushed++] = nextChar;
                 if(bytesPushed == BUFFER_SIZE){
-                    writeToFile();
-                    bytesPushed = 0;
+                    flush();
                 } 
             }
 
