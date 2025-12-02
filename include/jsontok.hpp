@@ -28,6 +28,8 @@ namespace jsontok{
                 tokenType = type;
             }
             
+            Token(){}
+
             TokenType getTokenType() const{
                 return tokenType;
             }
@@ -37,7 +39,7 @@ namespace jsontok{
             }
     };
 
-    class JsonTokenizer{
+    class JsonStreamTokenizer{
         private:
             enum class TokenizerContext{
                 NORMAL,
@@ -48,7 +50,7 @@ namespace jsontok{
             std::vector<Token> tokenStream;
 
         public:
-            JsonTokenizer(std::string fileName) : reader(fileName){}
+            JsonStreamTokenizer(std::string fileName) : reader(fileName){}
 
             std::vector<Token> getTokenStream(){
                 return tokenStream;
@@ -65,9 +67,6 @@ namespace jsontok{
                     if(reader.isEof()){
                         break;
                     }
-
-                    std::cout<<nextChar<<" : "<<buffer<<std::endl;
-
                     switch(cntx){
                         case TokenizerContext::NORMAL:{
                             switch(nextChar){
@@ -245,5 +244,172 @@ namespace jsontok{
                 }
                 tokenStream.push_back(Token("$",TokenType::END_OF_FILE));
             }
+        
+    };
+
+    class JsonOnDemandTokenizer{
+        private:
+            enum class TokenizerContext{
+                NORMAL,
+                NUMBER,
+                STRING
+            };
+            fileutils::InputFileReader reader;
+            Token peek;
+            bool shouldConsume = true;
+
+            Token processNextToken() {
+                static std::string buffer;
+                static TokenizerContext cntx = TokenizerContext::NORMAL;
+                static bool isEscape = false;
+                static char unProcessed;
+                static bool unProcessedCharPresent = false;
+
+                while (true) {
+                    char nextChar = 0;
+                    if(!unProcessedCharPresent){
+                        nextChar = reader.readNextChar();
+                    }
+                    else{
+                        nextChar = unProcessed;
+                        unProcessedCharPresent = false;
+                    }
+                    if (reader.isEof()) {
+                        return Token("$", TokenType::END_OF_FILE);
+                    }
+                    switch (cntx) {
+                        case TokenizerContext::NORMAL: {
+                            switch (nextChar) {
+                                case '{': return Token("{", TokenType::OPEN_BRACE);
+                                case '[': return Token("[", TokenType::OPEN_BRACK);
+                                case ']': return Token("]", TokenType::CLOSE_BRACK);
+                                case '}': return Token("}", TokenType::CLOSE_BRACE);
+                                case ':': return Token(":", TokenType::COLON);
+                                case ',': return Token(",", TokenType::COMMA);
+
+                                case ' ':
+                                case '\n':
+                                case '\r':
+                                case '\t': {
+                                    break;
+                                }
+
+                                case '\"': {
+                                    cntx = TokenizerContext::STRING;
+                                    buffer.clear();
+                                    break;
+                                }
+
+                                case '-': case '0': case '1': case '2': case '3':
+                                case '4': case '5': case '6': case '7': case '8': case '9': {
+                                    cntx = TokenizerContext::NUMBER;
+                                    buffer.clear();
+                                    buffer += nextChar;
+                                    break;
+                                }
+
+                                default: {
+                                    if (!isalpha(nextChar))
+                                        throw std::runtime_error(std::string("Invalid character in JSON: ") + nextChar);
+
+                                    buffer += nextChar;
+                                    if (buffer == "null") {
+                                        buffer.clear();
+                                        return Token("null", TokenType::NULL_VAL);
+                                    }
+                                    if (buffer == "true") {
+                                        buffer.clear();
+                                        return Token("true", TokenType::BOOL);
+                                    }
+                                    if (buffer == "false") {
+                                        buffer.clear();
+                                        return Token("false", TokenType::BOOL);
+                                    }
+                                    if (buffer.size() > 5)
+                                        throw std::runtime_error(std::string("Invalid literal while parsing: ") + buffer);
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+
+                        case TokenizerContext::STRING: {
+                            switch (nextChar) {
+                                case '\\': {
+                                    isEscape = !isEscape;
+                                    buffer += '\\';
+                                    break;
+                                }
+                                case '\"': {
+                                    if (!isEscape) {
+                                        cntx = TokenizerContext::NORMAL;
+                                        std::string val = buffer;
+                                        buffer.clear();
+                                        return Token(val, TokenType::STRING);
+                                    } else {
+                                        buffer += '\"';
+                                        isEscape = false;
+                                    }
+                                    break;
+                                }
+                                default: {
+                                    buffer += nextChar;
+                                    isEscape = false;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+
+                        case TokenizerContext::NUMBER: {
+                            if (isdigit(nextChar) || nextChar == '.' || nextChar == 'e' || nextChar == 'E' ||
+                                nextChar == '+' || nextChar == '-') {
+                                buffer += nextChar;
+                            } else {
+                                double num;
+                                try {
+                                    num = std::stod(buffer);
+                                } catch (...) {
+                                    throw std::runtime_error(std::string("Invalid number format: ") + buffer);
+                                }
+                                std::string val = buffer;
+                                buffer.clear();
+                                cntx = TokenizerContext::NORMAL;
+                                
+                                unProcessed = nextChar;
+                                unProcessedCharPresent = true;
+
+                                return Token(val, TokenType::NUMBER);
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                return Token("$", TokenType::END_OF_FILE);
+            }
+
+        public:
+            
+            JsonOnDemandTokenizer(std::string fileName) : reader(fileName) {}
+
+            Token peekNextToken(){
+                if(shouldConsume){
+                    peek = processNextToken();
+                    shouldConsume = false;
+                }
+                return peek;
+            }
+
+            Token getNextToken(){
+                if(!shouldConsume){
+                    shouldConsume = true;
+                    return peek;   
+                }
+                return processNextToken();
+                
+            }
+            
+        
     };
 }

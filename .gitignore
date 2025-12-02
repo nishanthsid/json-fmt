@@ -3,3 +3,5 @@ jsonfmt
 test
 test.json
 test.cpp
+main*
+t.txt
