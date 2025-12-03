@@ -364,10 +364,7 @@ namespace jsontok{
                                 case ',':
                                 case ']':
                                 case '}':{
-                                    try{
-                                        double num = std::stod(buffer.data());
-                                    }
-                                    catch(std::exception& e){
+                                    if(!NumberParser::isRealNum(buffer)){
                                         throw std::runtime_error(std::string("Invalid numeric format encountered: ") + buffer);
                                     }
                                     tokenStream.push_back(Token(buffer.data(), TokenType::NUMBER));
@@ -537,10 +534,7 @@ namespace jsontok{
                                 nextChar == '+' || nextChar == '-') {
                                 buffer += nextChar;
                             } else {
-                                double num;
-                                try {
-                                    num = std::stod(buffer);
-                                } catch (...) {
+                                if(!NumberParser::isRealNum(buffer)){
                                     throw std::runtime_error(std::string("Invalid number format: ") + buffer);
                                 }
                                 std::string val = buffer;

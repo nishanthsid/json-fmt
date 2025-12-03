@@ -27,12 +27,8 @@ namespace jsonparse {
 
     using JPtr = std::shared_ptr<JsonEntity>;
 
-    // ================================================================
-    //  JsonObject — ORDERED + DUPLICATE KEYS PRESERVED
-    // ================================================================
     class JsonObject : public JsonEntity {
     private:
-        // PRESERVE ORDER + DUPLICATES
         std::vector<std::pair<std::string, JPtr>> keyPairs;
 
     public:
@@ -40,12 +36,10 @@ namespace jsonparse {
             return JsonObjectType::OBJECT;
         }
 
-        // Add key–value pair (DO NOT overwrite)
         void addKeyPair(const std::string& key, JPtr value) {
             keyPairs.emplace_back(key, value);
         }
 
-        // Return FIRST matching key (like normal JSON behavior)
         JPtr getValue(const std::string& key) {
             for (auto& kv : keyPairs) {
                 if (kv.first == key)
@@ -120,9 +114,6 @@ namespace jsonparse {
         LiteralType getLiteralType() const override { return LiteralType::NULL_VAL; }
     };
 
-    // ==================================================================
-    // PARSER (unchanged except error messages)
-    // ==================================================================
     class JsonParser {
     private:
         static void throwError(const std::string& where,
