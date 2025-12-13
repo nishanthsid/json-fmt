@@ -1,11 +1,2 @@
-*.json
-jsonfmt
-test
-test.json
-test.cpp
-test2.cpp
-test2
-main*
-t.txt
-*.log
-testt
+tests
+.vscode

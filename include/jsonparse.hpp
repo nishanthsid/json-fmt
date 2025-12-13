@@ -145,7 +145,7 @@ namespace jsonparse {
             else {
                 throwError("startParsing()", "{ or [", peek);
             }
-        }
+        } 
 
         static JPtr parseObject(jsontok::JsonOnDemandTokenizer& tokenizer) {
             JPtr jsonEntity = std::make_shared<JsonObject>();
@@ -308,4 +308,30 @@ namespace jsonparse {
         }
     };
 
+    class JsonSwifty{
+        private:
+            static void throwError(const std::string& where,
+                                const std::string& expected,
+                                const jsontok::Token& found)
+            {
+                std::string msg =
+                    "\n[JSON Parse Error]\n"
+                    "Location: " + where + "\n"
+                    "Expected: " + expected + "\n"
+                    "Found Token: '" + found.getRawTokenValue() + "'\n"
+                    "TokenType: " + std::to_string(static_cast<int>(found.getTokenType())) + "\n";
+
+                throw std::runtime_error(msg);
+            }
+
+            JPtr root;
+            bool init = false;
+        
+        public:
+            
+            void startParsing(jsontok::JsonOnDemandTokenizer& tokenizer){
+                
+            }
+
+    };
 }
